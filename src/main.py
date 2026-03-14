@@ -1,6 +1,8 @@
 from pathlib import Path
+
 import shutil
 import ssl
+
 import urllib.request
 import urllib.error
 
@@ -14,6 +16,9 @@ HAND_MODEL_URL = (
     "hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
 )
 HAND_MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
+
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+TEXT_POSITION = (50, 50)
 
 def finger_up(landmarks, tip, pip):
     return landmarks[tip].y < landmarks[pip].y
@@ -41,6 +46,7 @@ def ensure_task_model(model_path: Path):
 
 def draw_task_landmarks(frame, hand_landmarks, connections):
     h, w = frame.shape[:2]
+
     for lm in hand_landmarks:
         x = int(lm.x * w)
         y = int(lm.y * h)
@@ -52,6 +58,17 @@ def draw_task_landmarks(frame, hand_landmarks, connections):
         x1, y1 = int(start.x * w), int(start.y * h)
         x2, y2 = int(end.x * w), int(end.y * h)
         cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
+
+def detect_domain_expansion(lm):
+    index_up = finger_up(lm, 8, 6)
+    middle_up = finger_up(lm, 12, 10)
+    ring_up = finger_up(lm, 16, 14)
+    pinky_up = finger_up(lm, 20, 18)
+
+    if index_up and middle_up and not ring_up and not pinky_up:
+        return "Unlimited Void"
+
+    return None
 
 if USE_LEGACY_SOLUTIONS:
     mp_hands = mp.solutions.hands
@@ -79,12 +96,13 @@ else:
     hand_landmarker = vision.HandLandmarker.create_from_options(options)
     hand_connections = vision.HandLandmarksConnections.HAND_CONNECTIONS
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 if not cap.isOpened():
     raise RuntimeError("Could not open webcam (index 0).")
 
 try:
     frame_index = 0
+    
     while True:
         success, frame = cap.read()
         if not success:
@@ -102,7 +120,7 @@ try:
                     mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
         else:
             frame_index += 1
-            timestamp_ms = int(frame_index * (1000 / 30))
+            timestamp_ms = int(frame_index * 33)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
             results = hand_landmarker.detect_for_video(mp_image, timestamp_ms)
             detected_hands = results.hand_landmarks if results.hand_landmarks else []
@@ -110,23 +128,18 @@ try:
                 draw_task_landmarks(frame, hand_landmarks, hand_connections)
 
         for lm in detected_hands:
-            index_up = finger_up(lm, 8, 6)
-            middle_up = finger_up(lm, 12, 10)
-            ring_up = finger_up(lm, 16, 14)
-            pinky_up = finger_up(lm, 20, 18)
+            domain = detect_domain_expansion(lm)
 
-            # gojo
-            if index_up and middle_up and not ring_up and not pinky_up:
+            if domain:
                 cv2.putText(
                     frame,
-                    "Domain Expansion: Unlimited Void",
-                    (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
+                    f"Domain Expansion: {domain}",
+                    TEXT_POSITION,
+                    FONT,
                     1,
                     (255, 0, 255),
                     3,
                 )
-                break
 
         cv2.imshow("Domain Expansion Detector", frame)
 
