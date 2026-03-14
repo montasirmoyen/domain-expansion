@@ -1,4 +1,4 @@
-### ?
+# domain-expansion
 
 This program uses a webcam to detect specific hand gestures and identifies which Domain Expansion hand sign they correspond to. When a gesture is recognized, the program displays the name of the Domain Expansion associated with that hand sign.
 
