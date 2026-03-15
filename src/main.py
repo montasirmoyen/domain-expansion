@@ -118,6 +118,9 @@ def is_sukuna_pair(hand_a, hand_b):
         wrists_reasonable
     )
 
+def is_mahito_pair(hand_a, hand_b):
+    pass
+
 def is_sukuna_hand(landmarks):
     index_curled = is_finger_curled(landmarks, 5, 6, 8)
     middle_extended = is_finger_extended(landmarks, 9, 10, 12)
