@@ -118,6 +118,42 @@ def is_sukuna_pair(hand_a, hand_b):
         wrists_reasonable
     )
 
+def is_mahito_pair(hand_a, hand_b):
+    scale_a = palm_scale(hand_a)
+    scale_b = palm_scale(hand_b)
+    scale = (scale_a + scale_b) / 2
+
+    # pinkies should touch
+    pinky_dist = distance_3d(hand_a[20], hand_b[20]) / scale
+    pinkies_touch = pinky_dist <= 0.9
+
+    # thumbs overlap or are very close
+    thumb_dist = distance_3d(hand_a[4], hand_b[4]) / scale
+    thumbs_close = thumb_dist <= 1.0
+
+    # palms should NOT touch (egg space)
+    palm_center_a = hand_center(hand_a)
+    palm_center_b = hand_center(hand_b)
+
+    palm_gap = normalized_point_distance(
+        (palm_center_a[0], palm_center_a[1]),
+        (palm_center_b[0], palm_center_b[1]),
+        scale,
+    )
+
+    palms_separated = 0.6 <= palm_gap <= 2.2
+
+    # wrists still near each other
+    wrist_dist = distance_3d(hand_a[0], hand_b[0]) / scale
+    wrists_reasonable = 0.4 <= wrist_dist <= 3.5
+
+    return (
+        pinkies_touch
+        and thumbs_close
+        and palms_separated
+        and wrists_reasonable
+    )
+
 def is_sukuna_hand(landmarks):
     index_curled = is_finger_curled(landmarks, 5, 6, 8)
     middle_extended = is_finger_extended(landmarks, 9, 10, 12)
@@ -153,10 +189,10 @@ def is_gojo_hand(landmarks):
     )
 
 def smooth_domain_prediction(domain, hand_count):
-    if hand_count < 2 and domain == "Malevolent Shrine":
+    if hand_count < 2 and (domain == "Malevolent Shrine" or domain == "Self-Embodiment of Perfection"):
         domain = None
 
-    if hand_count >= 2 and domain == "Unlimited Void":
+    if hand_count > 1 and domain == "Unlimited Void":
         domain = None
 
     PREDICTION_HISTORY.append(domain if domain else "")
@@ -165,10 +201,10 @@ def smooth_domain_prediction(domain, hand_count):
         return None
 
     top_label, top_count = votes.most_common(1)[0]
-    if hand_count < 2 and top_label == "Malevolent Shrine":
+    if hand_count < 2 and (top_label == "Malevolent Shrine" or top_label == "Self-Embodiment of Perfection"):
         return None
 
-    if hand_count >= 2 and top_label == "Unlimited Void":
+    if hand_count > 1 and top_label == "Unlimited Void":
         return None
 
     if top_count >= 4 and top_count >= (len(PREDICTION_HISTORY) // 2 + 1):
@@ -218,8 +254,12 @@ def detect_domain_expansion(hands_landmarks):
     if len(hands_landmarks) >= 2:
         for first_index in range(len(hands_landmarks) - 1):
             for second_index in range(first_index + 1, len(hands_landmarks)):
-                if is_sukuna_pair(hands_landmarks[first_index], hands_landmarks[second_index]):
+                hand_a = hands_landmarks[first_index]
+                hand_b = hands_landmarks[second_index]
+                if is_sukuna_pair(hand_a, hand_b):
                     return "Malevolent Shrine"
+                if is_mahito_pair(hand_a, hand_b):
+                    return "Self-Embodiment of Perfection"
 
         sukuna_matches = sum(1 for lm in hands_landmarks if is_sukuna_hand(lm))
         if sukuna_matches > 0:
