@@ -18,3 +18,5 @@ pip install -r requirements.txt
 
 python3 src/main.py
 ```
+
+Pressing "Q" on your keyboard closes the program.
