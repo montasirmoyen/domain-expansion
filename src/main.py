@@ -1,6 +1,8 @@
 from pathlib import Path
 from collections import Counter, deque
+from dataclasses import dataclass
 import math
+from typing import Callable
 
 import shutil
 import ssl
@@ -22,6 +24,15 @@ HAND_MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 TEXT_POSITION = (50, 50)
 PREDICTION_HISTORY = deque(maxlen=8)
+
+@dataclass(frozen=True)
+class GestureRule:
+    name: str
+    min_hands: int
+    max_hands: int
+    priority: int
+    matcher: Callable[[list], bool]
+    color: tuple = (255, 255, 255)
 
 def distance_3d(a, b):
     return math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2)
@@ -65,23 +76,6 @@ def fingertip_cluster_center(landmarks, tip_indices):
 def normalized_point_distance(point_a, point_b, scale):
     return math.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2) / scale
 
-def is_sukuna_candidate_hand(landmarks):
-    scale = palm_scale(landmarks)
-    index_angle = finger_angle(landmarks, 5, 6, 8)
-    middle_angle = finger_angle(landmarks, 9, 10, 12)
-    ring_angle = finger_angle(landmarks, 13, 14, 16)
-    pinky_angle = finger_angle(landmarks, 17, 18, 20)
-
-    middle_ring_tips_close = distance_3d(landmarks[12], landmarks[16]) / scale <= 1.2
-
-    return (
-        middle_angle >= 145.0
-        and ring_angle >= 145.0
-        and index_angle <= 150.0
-        and pinky_angle <= 150.0
-        and middle_ring_tips_close
-    )
-
 def is_sukuna_pair(hand_a, hand_b):
     scale_a = palm_scale(hand_a)
     scale_b = palm_scale(hand_b)
@@ -108,8 +102,6 @@ def is_sukuna_pair(hand_a, hand_b):
     # make sure wrists are resonably positioned
     wrist_dist = distance_3d(hand_a[0], hand_b[0]) / scale
     wrists_reasonable = 0.4 <= wrist_dist <= 4.2
-
-    print(middle_dist, ring_dist, pinky_dist)
 
     touch_count = sum([middles_touch, rings_touch, pinkies_touch])
     return (
@@ -188,11 +180,75 @@ def is_gojo_hand(landmarks):
         and index_middle_tips_close
     )
 
-def smooth_domain_prediction(domain, hand_count):
-    if hand_count < 2 and (domain == "Malevolent Shrine" or domain == "Self-Embodiment of Perfection"):
-        domain = None
+def match_malevolent_shrine(hands_landmarks):
+    if len(hands_landmarks) < 2:
+        return False
 
-    if hand_count > 1 and domain == "Unlimited Void":
+    for first_index in range(len(hands_landmarks) - 1):
+        for second_index in range(first_index + 1, len(hands_landmarks)):
+            if is_sukuna_pair(hands_landmarks[first_index], hands_landmarks[second_index]):
+                return True
+
+    return False
+
+def match_self_embodiment_of_perfection(hands_landmarks):
+    if len(hands_landmarks) < 2:
+        return False
+
+    for first_index in range(len(hands_landmarks) - 1):
+        for second_index in range(first_index + 1, len(hands_landmarks)):
+            if is_mahito_pair(hands_landmarks[first_index], hands_landmarks[second_index]):
+                return True
+    return False
+
+def match_unlimited_void(hands_landmarks):
+    if len(hands_landmarks) != 1:
+        return False
+    return is_gojo_hand(hands_landmarks[0])
+
+GESTURE_RULES = sorted(
+    [
+        GestureRule(
+            name="Malevolent Shrine",
+            min_hands=2,
+            max_hands=2,
+            priority=100,
+            color=(0, 0, 255),
+            matcher=match_malevolent_shrine,
+        ),
+        GestureRule(
+            name="Self-Embodiment of Perfection",
+            min_hands=2,
+            max_hands=2,
+            priority=90,
+            color=(255, 0, 255),
+            matcher=match_self_embodiment_of_perfection,
+        ),
+        GestureRule(
+            name="Unlimited Void",
+            min_hands=1,
+            max_hands=1,
+            priority=80,
+            color=(255, 255, 255),
+            matcher=match_unlimited_void,
+        ),
+    ],
+    key=lambda rule: rule.priority,
+    reverse=True,
+)
+
+GESTURE_RULES_BY_NAME = {rule.name: rule for rule in GESTURE_RULES}
+
+def is_label_allowed_for_hand_count(label, hand_count):
+    if not label:
+        return False
+    rule = GESTURE_RULES_BY_NAME.get(label)
+    if not rule:
+        return False
+    return rule.min_hands <= hand_count <= rule.max_hands
+
+def smooth_domain_prediction(domain, hand_count):
+    if not is_label_allowed_for_hand_count(domain, hand_count):
         domain = None
 
     PREDICTION_HISTORY.append(domain if domain else "")
@@ -201,10 +257,7 @@ def smooth_domain_prediction(domain, hand_count):
         return None
 
     top_label, top_count = votes.most_common(1)[0]
-    if hand_count < 2 and (top_label == "Malevolent Shrine" or top_label == "Self-Embodiment of Perfection"):
-        return None
-
-    if hand_count > 1 and top_label == "Unlimited Void":
+    if not is_label_allowed_for_hand_count(top_label, hand_count):
         return None
 
     if top_count >= 4 and top_count >= (len(PREDICTION_HISTORY) // 2 + 1):
@@ -251,26 +304,11 @@ def detect_domain_expansion(hands_landmarks):
     if not hands_landmarks:
         return None
 
-    if len(hands_landmarks) >= 2:
-        for first_index in range(len(hands_landmarks) - 1):
-            for second_index in range(first_index + 1, len(hands_landmarks)):
-                hand_a = hands_landmarks[first_index]
-                hand_b = hands_landmarks[second_index]
-                if is_sukuna_pair(hand_a, hand_b):
-                    return "Malevolent Shrine"
-                if is_mahito_pair(hand_a, hand_b):
-                    return "Self-Embodiment of Perfection"
+    hand_count = len(hands_landmarks)
+    for rule in GESTURE_RULES:
+        if rule.min_hands <= hand_count <= rule.max_hands and rule.matcher(hands_landmarks):
+            return rule.name
 
-        sukuna_matches = sum(1 for lm in hands_landmarks if is_sukuna_hand(lm))
-        if sukuna_matches > 0:
-            return "Malevolent Shrine"
-
-        return None
-
-    gojo_matches = sum(1 for lm in hands_landmarks if is_gojo_hand(lm))
-
-    if gojo_matches > 0:
-        return "Unlimited Void"
     return None
 
 if USE_LEGACY_SOLUTIONS:
@@ -340,7 +378,7 @@ try:
                 TEXT_POSITION,
                 FONT,
                 1,
-                (255, 0, 255),
+                GESTURE_RULES_BY_NAME[stable_domain].color,
                 3,
             )
 
