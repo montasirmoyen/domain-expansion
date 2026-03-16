@@ -5,7 +5,14 @@
 
 This program uses a webcam to detect specific hand gestures and identifies which Domain Expansion hand sign they correspond to. When a gesture is recognized, the program displays the name of the Domain Expansion associated with that hand sign.
 
-The goal is to demonstrate real-time hand tracking and gesture recognition using computer vision.
+<details>
+<summary>Current Domain Expansions</summary>
+<ul>
+<li>Malevolent Shrine</li>
+<li>Self-Embodiment of Perfection</li>
+<li>Infinite Void</li>
+</ul>
+</details>
 
 ### Backstory
 
@@ -22,4 +29,5 @@ pip install -r requirements.txt
 python3 src/main.py
 ```
 
+[How to perform each Domain Expansion?](https://www.wikihow.com/Domain-Expansion-Hand-Sign)
 Pressing "Q" on your keyboard closes the program.
