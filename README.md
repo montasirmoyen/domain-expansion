@@ -8,9 +8,10 @@ This program uses a webcam to detect specific hand gestures and identifies which
 <details>
 <summary>Current Domain Expansions</summary>
 <ul>
+<li>Infinite Void</li>
 <li>Malevolent Shrine</li>
 <li>Self-Embodiment of Perfection</li>
-<li>Infinite Void</li>
+<li>Yuji Itadori's Unknown</li>
 </ul>
 </details>
 
