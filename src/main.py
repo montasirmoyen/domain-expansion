@@ -82,7 +82,58 @@ def fingertip_cluster_center(landmarks, tip_indices):
 def normalized_point_distance(point_a, point_b, scale):
     return math.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2) / scale
 
+def is_fist(hand):
+    return all([
+        is_finger_curled(hand, 5, 6, 8, 135),
+        is_finger_curled(hand, 9, 10, 12, 135),
+        is_finger_curled(hand, 13, 14, 16, 135),
+        is_finger_curled(hand, 17, 18, 20, 135),
+    ])
+
+def is_open_hand_thumb_in(hand):
+    # 4 fingers extended ignore thumb
+    fingers_extended = sum([
+        is_finger_extended(hand, 5, 6, 8),
+        is_finger_extended(hand, 9, 10, 12),
+        is_finger_extended(hand, 13, 14, 16),
+        is_finger_extended(hand, 17, 18, 20),
+    ])
+
+    if fingers_extended < 3: # allow some wiggle room
+        return False
+
+    scale = palm_scale(hand)
+
+    # thumb tucked to palm
+    thumb_to_palm = distance_3d(hand[4], hand[9]) / scale
+    thumb_tucked = thumb_to_palm < 0.55
+
+    return thumb_tucked
+
 # Pair Checks
+
+def is_yuta_pair(hand_a, hand_b):
+    scale = (palm_scale(hand_a) + palm_scale(hand_b)) / 2
+
+    a_is_fist = is_fist(hand_a)
+    b_is_fist = is_fist(hand_b)
+
+    a_is_open = is_open_hand_thumb_in(hand_a)
+    b_is_open = is_open_hand_thumb_in(hand_b)
+
+    # order dont matter
+    if not (
+        (a_is_fist and b_is_open) or
+        (b_is_fist and a_is_open)
+    ):
+        return False
+
+    # hands should be near each other
+    wrist_dist = distance_3d(hand_a[0], hand_b[0]) / scale
+    if wrist_dist > 1.8:
+        return False
+
+    return True
 
 def is_hakari_pair(hand_a, hand_b):
     # determines which hand is above
@@ -225,43 +276,12 @@ def is_sukuna_pair(hand_a, hand_b):
         wrists_reasonable
     )
 
-# Individual Hand Checks
-
-def is_sukuna_hand(landmarks):
-    index_curled = is_finger_curled(landmarks, 5, 6, 8)
-    middle_extended = is_finger_extended(landmarks, 9, 10, 12)
-    ring_extended = is_finger_extended(landmarks, 13, 14, 16)
-    pinky_curled = is_finger_curled(landmarks, 17, 18, 20)
-
-    scale = palm_scale(landmarks)
-    middle_ring_tips_close = distance_3d(landmarks[12], landmarks[16]) / scale <= 0.55
-
-    return (
-        index_curled
-        and middle_extended
-        and ring_extended
-        and pinky_curled
-        and middle_ring_tips_close
-    )
-
-def is_gojo_hand(landmarks):
-    index_extended = is_finger_extended(landmarks, 5, 6, 8)
-    middle_extended = is_finger_extended(landmarks, 9, 10, 12)
-    ring_curled = is_finger_curled(landmarks, 13, 14, 16)
-    pinky_curled = is_finger_curled(landmarks, 17, 18, 20)
-
-    scale = palm_scale(landmarks)
-    index_middle_tips_close = distance_3d(landmarks[8], landmarks[12]) / scale <= 0.65
-
-    return (
-        index_extended
-        and middle_extended
-        and ring_curled
-        and pinky_curled
-        and index_middle_tips_close
-    )
-
 # Match Checks
+
+def match_authentic_mutual_love(hands_landmarks):
+    if len(hands_landmarks) != 2:
+        return False
+    return is_yuta_pair(hands_landmarks[0], hands_landmarks[1])
 
 def match_idle_death_gamble(hands_landmarks):
     if len(hands_landmarks) != 2:
@@ -304,10 +324,54 @@ def match_unlimited_void(hands_landmarks):
         return False
     return is_gojo_hand(hands_landmarks[0])
 
+# Individual Hand Checks
+
+def is_sukuna_hand(landmarks):
+    index_curled = is_finger_curled(landmarks, 5, 6, 8)
+    middle_extended = is_finger_extended(landmarks, 9, 10, 12)
+    ring_extended = is_finger_extended(landmarks, 13, 14, 16)
+    pinky_curled = is_finger_curled(landmarks, 17, 18, 20)
+
+    scale = palm_scale(landmarks)
+    middle_ring_tips_close = distance_3d(landmarks[12], landmarks[16]) / scale <= 0.55
+
+    return (
+        index_curled
+        and middle_extended
+        and ring_extended
+        and pinky_curled
+        and middle_ring_tips_close
+    )
+
+def is_gojo_hand(landmarks):
+    index_extended = is_finger_extended(landmarks, 5, 6, 8)
+    middle_extended = is_finger_extended(landmarks, 9, 10, 12)
+    ring_curled = is_finger_curled(landmarks, 13, 14, 16)
+    pinky_curled = is_finger_curled(landmarks, 17, 18, 20)
+
+    scale = palm_scale(landmarks)
+    index_middle_tips_close = distance_3d(landmarks[8], landmarks[12]) / scale <= 0.65
+
+    return (
+        index_extended
+        and middle_extended
+        and ring_curled
+        and pinky_curled
+        and index_middle_tips_close
+    )
+
 # All Domains
 
 GESTURE_RULES = sorted(
     [
+        GestureRule(
+            name="Authentic Mutual Love",
+            min_hands=2,
+            max_hands=2,
+            priority=130,
+            color=(180, 100, 255),
+            matcher=match_authentic_mutual_love,
+        ),
         GestureRule(
             name="Idle Death Gamble",
             min_hands=2,
