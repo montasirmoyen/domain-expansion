@@ -84,6 +84,38 @@ def normalized_point_distance(point_a, point_b, scale):
 
 # Pair Checks
 
+def is_hakari_pair(hand_a, hand_b):
+    # determines which hand is above
+    if hand_a[0].y < hand_b[0].y:
+        upper, lower = hand_a, hand_b
+    else:
+        upper, lower = hand_b, hand_a
+
+    scale = (palm_scale(upper) + palm_scale(lower)) / 2
+
+    # upper hand
+    tip_dist = distance_3d(upper[4], upper[8]) / scale
+    is_circle = tip_dist < 0.35
+    middle_straight = is_finger_extended(upper, 9, 10, 12)
+    ring_straight   = is_finger_extended(upper, 13, 14, 16)
+    pinky_straight  = is_finger_extended(upper, 17, 18, 20)
+    
+    upper_ok = is_circle and middle_straight and ring_straight and pinky_straight
+
+    # lower hand (flat one)
+    lower_fingers_straight = all([
+        is_finger_extended(lower, 5, 6, 8),
+        is_finger_extended(lower, 9, 10, 12),
+        is_finger_extended(lower, 13, 14, 16),
+        is_finger_extended(lower, 17, 18, 20)
+    ])
+    
+    # upper hand must be above and close to lower hand
+    vertical_gap = (lower[9].y - upper[0].y) # dist from lower middle mcp to upper wrist
+    hands_close = 0.1 < vertical_gap < 1.0
+
+    return upper_ok and lower_fingers_straight and hands_close
+
 def is_yuji_pair(hand_a, hand_b):
     scale = (palm_scale(hand_a) + palm_scale(hand_b)) / 2
 
@@ -231,6 +263,11 @@ def is_gojo_hand(landmarks):
 
 # Match Checks
 
+def match_idle_death_gamble(hands_landmarks):
+    if len(hands_landmarks) != 2:
+        return False
+    return is_hakari_pair(hands_landmarks[0], hands_landmarks[1])
+
 def match_yuji_itadori(hands_landmarks):
     if len(hands_landmarks) < 2:
         return False
@@ -272,20 +309,28 @@ def match_unlimited_void(hands_landmarks):
 GESTURE_RULES = sorted(
     [
         GestureRule(
-            name="Yuji Itadori",
+            name="Idle Death Gamble",
             min_hands=2,
             max_hands=2,
-            priority=110,
-            color=(0, 255, 0),
-            matcher=match_yuji_itadori,
+            priority=120,
+            color=(0, 200, 255),
+            matcher=match_idle_death_gamble,
         ),
         GestureRule(
             name="Malevolent Shrine",
             min_hands=2,
             max_hands=2,
-            priority=100,
+            priority=110,
             color=(0, 0, 255),
             matcher=match_malevolent_shrine,
+        ),
+        GestureRule(
+            name="Yuji Itadori",
+            min_hands=2,
+            max_hands=2,
+            priority=100,
+            color=(0, 255, 0),
+            matcher=match_yuji_itadori,
         ),
         GestureRule(
             name="Self-Embodiment of Perfection",
