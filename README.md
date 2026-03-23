@@ -8,10 +8,11 @@ This program uses a webcam to detect specific hand gestures and identifies which
 <details>
 <summary>Current Domain Expansions</summary>
 <ul>
-<li>Infinite Void</li>
-<li>Malevolent Shrine</li>
-<li>Self-Embodiment of Perfection</li>
-<li>Yuji Itadori's Unknown</li>
+<li>Satoru Gojo's "Infinite Void"</li>
+<li>Ryomen Sukuna's "Malevolent Shrine"</li>
+<li>Mahito's "Self-Embodiment of Perfection"</li>
+<li>Yuji Itadori's Unnamed Domain Expansion</li>
+<li>Kinji Hakari "Idle Death Gamble"</li>
 </ul>
 </details>
 
