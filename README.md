@@ -13,6 +13,7 @@ This program uses a webcam to detect specific hand gestures and identifies which
 <li>Mahito's "Self-Embodiment of Perfection"</li>
 <li>Yuji Itadori's Unnamed Domain Expansion</li>
 <li>Kinji Hakari "Idle Death Gamble"</li>
+<li>Yuta Okkotsu's "Authentic Mutual Love"</li>
 </ul>
 </details>
 
