@@ -13,6 +13,8 @@ import urllib.error
 import cv2
 import mediapipe as mp
 
+import numpy as np
+
 import random
 
 # Constants/config
@@ -499,6 +501,9 @@ def detect_domain_expansion(hands_landmarks):
 
 # Gojo
 
+STARS = []
+SLASHES = []
+
 def init_stars(width, height, count=120):
     global STARS
     STARS = [
@@ -530,6 +535,52 @@ def apply_infinite_void(frame):
         cv2.circle(dark, (int(x), int(y)), 1, (255, 255, 255), -1)
 
     return dark
+
+def spawn_slash(width, height):
+    x1 = random.randint(0, width)
+    y1 = random.randint(0, height)
+
+    length = random.randint(80, 200)
+    angle = random.uniform(-0.8, 0.8)  # diagonal
+
+    x2 = int(x1 + length * math.cos(angle))
+    y2 = int(y1 + length * math.sin(angle))
+
+    life = random.randint(3, 6)
+
+    SLASHES.append([x1, y1, x2, y2, life])
+
+def apply_malevolent_shrine(frame):
+    h, w = frame.shape[:2]
+
+    # red screen sorta
+    red_overlay = frame.copy()
+    red_overlay[:, :, 2] = cv2.add(red_overlay[:, :, 2], 80) # add more red
+    frame = cv2.addWeighted(frame, 0.5, red_overlay, 0.5, 0)
+
+    # slashes
+    if random.random() < 0.4:
+        spawn_slash(w, h)
+    new_slashes = []
+    for x1, y1, x2, y2, life in SLASHES:
+        thickness = 2 + (6 - life)
+
+        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), thickness)
+
+        life -= 1
+        if life > 0:
+            new_slashes.append([x1, y1, x2, y2, life])
+
+    SLASHES[:] = new_slashes
+
+    # screen shake
+    dx = random.randint(-5, 5)
+    dy = random.randint(-5, 5)
+
+    M = np.float32([[1, 0, dx], [0, 1, dy]])
+    frame = cv2.warpAffine(frame, M, (w, h))
+
+    return frame
 
 # Main Loop
 
@@ -597,7 +648,9 @@ try:
         frame_domain = detect_domain_expansion(detected_hands)
         stable_domain = smooth_domain_prediction(frame_domain, len(detected_hands))
 
-        if stable_domain == "Unlimited Void":
+        if stable_domain == "Malevolent Shrine":
+            frame = apply_malevolent_shrine(frame)
+        elif stable_domain == "Unlimited Void":
             frame = apply_infinite_void(frame)
 
         if stable_domain:
