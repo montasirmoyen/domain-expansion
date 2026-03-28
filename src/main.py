@@ -13,6 +13,8 @@ import urllib.error
 import cv2
 import mediapipe as mp
 
+import random
+
 # Constants/config
 
 USE_LEGACY_SOLUTIONS = hasattr(mp, "solutions") and hasattr(mp.solutions, "hands")
@@ -493,6 +495,42 @@ def detect_domain_expansion(hands_landmarks):
 
     return None
 
+# Visual Effects
+
+# Gojo
+
+def init_stars(width, height, count=120):
+    global STARS
+    STARS = [
+        [random.randint(0, width), random.randint(0, height), random.uniform(0.5, 2.0)]
+        for _ in range(count)
+    ]
+
+def apply_infinite_void(frame):
+    h, w = frame.shape[:2]
+
+    # darken screen
+    dark = (frame * 0.35).astype("uint8")
+
+    # littleb blur
+    dark = cv2.GaussianBlur(dark, (9, 9), 0)
+
+    # stars
+    for star in STARS:
+        x, y, speed = star
+
+        y += speed
+
+        if y > h:
+            y = 0
+            x = random.randint(0, w)
+
+        star[0], star[1] = x, y
+
+        cv2.circle(dark, (int(x), int(y)), 1, (255, 255, 255), -1)
+
+    return dark
+
 # Main Loop
 
 if USE_LEGACY_SOLUTIONS:
@@ -525,6 +563,10 @@ cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     raise RuntimeError("Could not open webcam (index 0).")
 
+ret, test_frame = cap.read()
+if ret:
+    init_stars(test_frame.shape[1], test_frame.shape[0])
+
 try:
     frame_index = 0
 
@@ -554,6 +596,9 @@ try:
 
         frame_domain = detect_domain_expansion(detected_hands)
         stable_domain = smooth_domain_prediction(frame_domain, len(detected_hands))
+
+        if stable_domain == "Unlimited Void":
+            frame = apply_infinite_void(frame)
 
         if stable_domain:
             cv2.putText(
