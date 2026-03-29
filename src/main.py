@@ -534,15 +534,17 @@ def apply_infinite_void(frame):
 
     return frame
 
+# Sukuna
 
-    return dark
+SLASHES = []
+FLASH_COUNTER = 0
 
 def spawn_slash(width, height):
     x1 = random.randint(0, width)
     y1 = random.randint(0, height)
 
     length = random.randint(80, 200)
-    angle = random.uniform(-0.8, 0.8)  # diagonal
+    angle = random.uniform(-0.8, 0.8) # diagonal
 
     x2 = int(x1 + length * math.cos(angle))
     y2 = int(y1 + length * math.sin(angle))
@@ -552,33 +554,39 @@ def spawn_slash(width, height):
     SLASHES.append([x1, y1, x2, y2, life])
 
 def apply_malevolent_shrine(frame):
+    global FLASH_COUNTER
     h, w = frame.shape[:2]
 
-    # red screen sorta
-    red_overlay = frame.copy()
-    red_overlay[:, :, 2] = cv2.add(red_overlay[:, :, 2], 80) # add more red
-    frame = cv2.addWeighted(frame, 0.5, red_overlay, 0.5, 0)
+    # red tint
+    red_tint = np.zeros_like(frame)
+    red_tint[:, :, 2] = 120
+    frame = cv2.addWeighted(frame, 0.7, red_tint, 0.3, 0)
 
-    # slashes
-    if random.random() < 0.4:
+    # flashing
+    FLASH_COUNTER += 1
+    if FLASH_COUNTER % 10 == 0:
+        return np.ones_like(frame) * 255
+
+    # grid cut
+    if random.random() < 0.3:
+        pos = random.randint(0, h if random.random() > 0.5 else w)
+        if random.random() > 0.5:
+            cv2.line(frame, (0, pos), (w, pos), (255, 255, 255), 1)
+        else:
+            cv2.line(frame, (pos, 0), (pos, h), (255, 255, 255), 1)
+
+    # rand slahes
+    if random.random() < 0.6:
         spawn_slash(w, h)
+    
     new_slashes = []
     for x1, y1, x2, y2, life in SLASHES:
-        thickness = 2 + (6 - life)
-
-        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), thickness)
-
-        life -= 1
-        if life > 0:
-            new_slashes.append([x1, y1, x2, y2, life])
-
+        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), life)
+        if life - 1 > 0: new_slashes.append([x1, y1, x2, y2, life - 1])
     SLASHES[:] = new_slashes
 
     # screen shake
-    dx = random.randint(-5, 5)
-    dy = random.randint(-5, 5)
-
-    M = np.float32([[1, 0, dx], [0, 1, dy]])
+    M = np.float32([[1, 0, random.randint(-15, 15)], [0, 1, random.randint(-15, 15)]])
     frame = cv2.warpAffine(frame, M, (w, h))
 
     return frame
