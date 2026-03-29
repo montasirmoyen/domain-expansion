@@ -500,39 +500,40 @@ def detect_domain_expansion(hands_landmarks):
 # Visual Effects
 
 # Gojo
-
 STARS = []
-SLASHES = []
+SYMBOLS = []
 
-def init_stars(width, height, count=120):
-    global STARS
-    STARS = [
-        [random.randint(0, width), random.randint(0, height), random.uniform(0.5, 2.0)]
-        for _ in range(count)
-    ]
+def init_stars(width, height, count=150):
+    global STARS, SYMBOLS
+    STARS = [[random.randint(0, width), random.randint(0, height), random.uniform(0.5, 3.0)] for _ in range(count)]
+    # Create scrolling symbols (numbers/chars)
+    for _ in range(30):
+        SYMBOLS.append([random.randint(0, width), random.randint(0, height), random.uniform(2, 6), str(random.randint(0, 9))])
 
 def apply_infinite_void(frame):
     h, w = frame.shape[:2]
+    
+    # dizzy effect
+    shift = 4
+    b = frame[:, :, 0]
+    g = np.roll(frame[:, :, 1], shift, axis=1)
+    r = np.roll(frame[:, :, 2], -shift, axis=1)
+    frame = cv2.merge([b, g, r])
 
     # darken screen
-    dark = (frame * 0.35).astype("uint8")
+    overlay = cv2.GaussianBlur(frame, (15, 15), 0)
+    frame = cv2.addWeighted(frame, 0.2, overlay, 0.8, 0)
 
-    # littleb blur
-    dark = cv2.GaussianBlur(dark, (9, 9), 0)
-
-    # stars
     for star in STARS:
-        x, y, speed = star
+        star[1] = (star[1] + star[2]) % h
+        cv2.circle(frame, (int(star[0]), int(star[1])), 1, (255, 255, 255), -1)
+    
+    for sym in SYMBOLS:
+        sym[1] = (sym[1] + sym[2]) % h
+        cv2.putText(frame, sym[3], (int(sym[0]), int(sym[1])), FONT, 0.5, (255, 255, 255), 1)
 
-        y += speed
+    return frame
 
-        if y > h:
-            y = 0
-            x = random.randint(0, w)
-
-        star[0], star[1] = x, y
-
-        cv2.circle(dark, (int(x), int(y)), 1, (255, 255, 255), -1)
 
     return dark
 
