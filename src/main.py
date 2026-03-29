@@ -458,7 +458,8 @@ def apply_malevolent_shrine(frame):
 
     return frame
 
-# mahito
+# Mahito
+
 MAHITO_PHASE = 0
 GHOST_FRAMES = deque(maxlen=3) # storing prev frames
 
