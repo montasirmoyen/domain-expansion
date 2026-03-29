@@ -41,6 +41,7 @@ class GestureRule:
     priority: int
     matcher: Callable[[list], bool]
     color: tuple = (255, 255, 255)
+    visual_effect: Callable[[np.ndarray], np.ndarray] = None
 
 # Geometry Functions
 
