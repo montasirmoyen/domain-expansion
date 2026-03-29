@@ -15,7 +15,6 @@ This program uses a webcam to detect specific hand gestures and identifies which
 <li><b>Kinji Hakari's "Idle Death Gamble"</b> (坐殺博徒, ざさつばくと, Zasatsu Bakuto)</li>
 <li><b>Yuta Okkotsu's "Authentic Mutual Love"</b> (真贋相愛, しんがんそうあい, Shingan Sōai)</li>
 </ul>
-</ul>
 </details>
 
 ### Backstory
