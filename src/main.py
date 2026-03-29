@@ -365,6 +365,137 @@ def is_gojo_hand(landmarks):
         and index_middle_tips_close
     )
 
+# Visual Effects
+
+# Gojo
+STARS = []
+SYMBOLS = []
+
+def init_stars(width, height, count=150):
+    global STARS, SYMBOLS
+    STARS = [[random.randint(0, width), random.randint(0, height), random.uniform(0.5, 3.0)] for _ in range(count)]
+    for _ in range(30):
+        SYMBOLS.append([random.randint(0, width), random.randint(0, height), random.uniform(2, 6), str(random.randint(0, 9))])
+
+def apply_infinite_void(frame):
+    h, w = frame.shape[:2]
+    
+    # dizzy effect
+    shift = 4
+    b = frame[:, :, 0]
+    g = np.roll(frame[:, :, 1], shift, axis=1)
+    r = np.roll(frame[:, :, 2], -shift, axis=1)
+    frame = cv2.merge([b, g, r])
+
+    # darken screen
+    overlay = cv2.GaussianBlur(frame, (15, 15), 0)
+    frame = cv2.addWeighted(frame, 0.2, overlay, 0.8, 0)
+
+    for star in STARS:
+        star[1] = (star[1] + star[2]) % h
+        cv2.circle(frame, (int(star[0]), int(star[1])), 1, (255, 255, 255), -1)
+    
+    for sym in SYMBOLS:
+        sym[1] = (sym[1] + sym[2]) % h
+        cv2.putText(frame, sym[3], (int(sym[0]), int(sym[1])), FONT, 0.5, (255, 255, 255), 1)
+
+    return frame
+
+# Sukuna
+
+SLASHES = []
+FLASH_COUNTER = 0
+
+def spawn_slash(width, height):
+    x1 = random.randint(0, width)
+    y1 = random.randint(0, height)
+
+    length = random.randint(80, 200)
+    angle = random.uniform(-0.8, 0.8) # diagonal
+
+    x2 = int(x1 + length * math.cos(angle))
+    y2 = int(y1 + length * math.sin(angle))
+
+    life = random.randint(3, 6)
+
+    SLASHES.append([x1, y1, x2, y2, life])
+
+def apply_malevolent_shrine(frame):
+    global FLASH_COUNTER
+    h, w = frame.shape[:2]
+
+    # red tint
+    red_tint = np.zeros_like(frame)
+    red_tint[:, :, 2] = 120
+    frame = cv2.addWeighted(frame, 0.7, red_tint, 0.3, 0)
+
+    # flashing
+    FLASH_COUNTER += 1
+    if FLASH_COUNTER % 10 == 0:
+        return np.ones_like(frame) * 255
+
+    # grid cut
+    if random.random() < 0.3:
+        pos = random.randint(0, h if random.random() > 0.5 else w)
+        if random.random() > 0.5:
+            cv2.line(frame, (0, pos), (w, pos), (255, 255, 255), 1)
+        else:
+            cv2.line(frame, (pos, 0), (pos, h), (255, 255, 255), 1)
+
+    # rand slahes
+    if random.random() < 0.6:
+        spawn_slash(w, h)
+    
+    new_slashes = []
+    for x1, y1, x2, y2, life in SLASHES:
+        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), life)
+        if life - 1 > 0: new_slashes.append([x1, y1, x2, y2, life - 1])
+    SLASHES[:] = new_slashes
+
+    # screen shake
+    M = np.float32([[1, 0, random.randint(-15, 15)], [0, 1, random.randint(-15, 15)]])
+    frame = cv2.warpAffine(frame, M, (w, h))
+
+    return frame
+
+# mahito
+MAHITO_PHASE = 0
+GHOST_FRAMES = deque(maxlen=3) # storing prev frames
+
+def apply_self_embodiment(frame):
+    global MAHITO_PHASE
+    h, w = frame.shape[:2]
+    MAHITO_PHASE += 0.2 # speed of wave
+
+    # wave distortion
+    map_x, map_y = np.meshgrid(np.arange(w), np.arange(h))
+    
+    distort_x = map_x + 10 * np.sin(map_y / 20.0 + MAHITO_PHASE)
+    distort_y = map_y + 10 * np.cos(map_x / 20.0 + MAHITO_PHASE)
+    
+    frame = cv2.remap(frame, distort_x.astype(np.float32), distort_y.astype(np.float32), cv2.INTER_LINEAR)
+
+    # ghost hands
+    current_ghost = frame.copy()
+    for prev_frame in GHOST_FRAMES:
+        frame = cv2.addWeighted(frame, 0.7, prev_frame, 0.3, 0)
+    GHOST_FRAMES.append(current_ghost)
+
+    # pirple tint
+    purple_overlay = np.zeros_like(frame)
+    purple_overlay[:] = (150, 0, 150)
+    
+    blur_amount = int(5 + 4 * np.sin(MAHITO_PHASE))
+    if blur_amount % 2 == 0: blur_amount += 1
+    frame = cv2.GaussianBlur(frame, (blur_amount, blur_amount), 0)
+    
+    frame = cv2.addWeighted(frame, 0.8, purple_overlay, 0.2, 0)
+
+    if random.random() < 0.1:
+        frame = cv2.copyMakeBorder(frame[5:h-5, 5:w-5], 5, 5, 5, 5, cv2.BORDER_REPLICATE)
+
+    return frame
+
 # All Domains
 
 GESTURE_RULES = sorted(
@@ -500,100 +631,6 @@ def detect_domain_expansion(hands_landmarks):
             return rule.name
 
     return None
-
-# Visual Effects
-
-# Gojo
-STARS = []
-SYMBOLS = []
-
-def init_stars(width, height, count=150):
-    global STARS, SYMBOLS
-    STARS = [[random.randint(0, width), random.randint(0, height), random.uniform(0.5, 3.0)] for _ in range(count)]
-    # Create scrolling symbols (numbers/chars)
-    for _ in range(30):
-        SYMBOLS.append([random.randint(0, width), random.randint(0, height), random.uniform(2, 6), str(random.randint(0, 9))])
-
-def apply_infinite_void(frame):
-    h, w = frame.shape[:2]
-    
-    # dizzy effect
-    shift = 4
-    b = frame[:, :, 0]
-    g = np.roll(frame[:, :, 1], shift, axis=1)
-    r = np.roll(frame[:, :, 2], -shift, axis=1)
-    frame = cv2.merge([b, g, r])
-
-    # darken screen
-    overlay = cv2.GaussianBlur(frame, (15, 15), 0)
-    frame = cv2.addWeighted(frame, 0.2, overlay, 0.8, 0)
-
-    for star in STARS:
-        star[1] = (star[1] + star[2]) % h
-        cv2.circle(frame, (int(star[0]), int(star[1])), 1, (255, 255, 255), -1)
-    
-    for sym in SYMBOLS:
-        sym[1] = (sym[1] + sym[2]) % h
-        cv2.putText(frame, sym[3], (int(sym[0]), int(sym[1])), FONT, 0.5, (255, 255, 255), 1)
-
-    return frame
-
-# Sukuna
-
-SLASHES = []
-FLASH_COUNTER = 0
-
-def spawn_slash(width, height):
-    x1 = random.randint(0, width)
-    y1 = random.randint(0, height)
-
-    length = random.randint(80, 200)
-    angle = random.uniform(-0.8, 0.8) # diagonal
-
-    x2 = int(x1 + length * math.cos(angle))
-    y2 = int(y1 + length * math.sin(angle))
-
-    life = random.randint(3, 6)
-
-    SLASHES.append([x1, y1, x2, y2, life])
-
-def apply_malevolent_shrine(frame):
-    global FLASH_COUNTER
-    h, w = frame.shape[:2]
-
-    # red tint
-    red_tint = np.zeros_like(frame)
-    red_tint[:, :, 2] = 120
-    frame = cv2.addWeighted(frame, 0.7, red_tint, 0.3, 0)
-
-    # flashing
-    FLASH_COUNTER += 1
-    if FLASH_COUNTER % 10 == 0:
-        return np.ones_like(frame) * 255
-
-    # grid cut
-    if random.random() < 0.3:
-        pos = random.randint(0, h if random.random() > 0.5 else w)
-        if random.random() > 0.5:
-            cv2.line(frame, (0, pos), (w, pos), (255, 255, 255), 1)
-        else:
-            cv2.line(frame, (pos, 0), (pos, h), (255, 255, 255), 1)
-
-    # rand slahes
-    if random.random() < 0.6:
-        spawn_slash(w, h)
-    
-    new_slashes = []
-    for x1, y1, x2, y2, life in SLASHES:
-        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), life)
-        if life - 1 > 0: new_slashes.append([x1, y1, x2, y2, life - 1])
-    SLASHES[:] = new_slashes
-
-    # screen shake
-    M = np.float32([[1, 0, random.randint(-15, 15)], [0, 1, random.randint(-15, 15)]])
-    frame = cv2.warpAffine(frame, M, (w, h))
-
-    return frame
 
 # Main Loop
 
