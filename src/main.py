@@ -377,7 +377,7 @@ def init_stars(width, height, count=150):
     for _ in range(30):
         SYMBOLS.append([random.randint(0, width), random.randint(0, height), random.uniform(2, 6), str(random.randint(0, 9))])
 
-def apply_infinite_void(frame):
+def apply_unlimited_void(frame):
     h, w = frame.shape[:2]
     
     # dizzy effect
@@ -549,7 +549,7 @@ GESTURE_RULES = sorted(
             priority=80,
             color=(255, 255, 255),
             matcher=match_unlimited_void,
-            visual_effect=apply_infinite_void
+            visual_effect=apply_unlimited_void
         ),
     ],
     key=lambda rule: rule.priority,

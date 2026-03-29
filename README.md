@@ -8,7 +8,7 @@ This program uses a webcam to detect specific hand gestures and identifies which
 <details>
 <summary>Current Domain Expansions</summary>
 <ul>
-<li>Satoru Gojo's "Infinite Void"</li>
+<li>Satoru Gojo's "Unlimited Void"</li>
 <li>Ryomen Sukuna's "Malevolent Shrine"</li>
 <li>Mahito's "Self-Embodiment of Perfection"</li>
 <li>Yuji Itadori's Unnamed Domain Expansion</li>
