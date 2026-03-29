@@ -497,6 +497,38 @@ def apply_self_embodiment(frame):
 
     return frame
 
+# Yuta (in prog)
+
+YUTA_PHASE = 0
+
+def apply_authentic_love(frame):
+    global YUTA_PHASE
+    YUTA_PHASE += 0.03
+
+    h, w = frame.shape[:2]
+
+    X, Y = np.meshgrid(np.linspace(-1, 1, w), np.linspace(-1, 1, h))
+    dist = np.sqrt(X**2 + Y**2)
+
+    vignette = np.clip(1.0 - dist * 0.6, 0.4, 1.0)
+    frame = (frame * vignette[:, :, np.newaxis]).astype(np.uint8)
+
+    # pink tint
+    pink_overlay = np.zeros_like(frame)
+    pink_overlay[:] = (180, 100, 255)
+
+    frame = cv2.addWeighted(frame, 0.88, pink_overlay, 0.12, 0)
+
+    brightness = 1.0 + 0.05 * np.sin(YUTA_PHASE)
+    frame = np.clip(frame * brightness, 0, 255).astype(np.uint8)
+
+    # trying rika shadow
+    if np.sin(YUTA_PHASE * 0.5) > 0.7:
+        shadow = cv2.GaussianBlur(frame, (21, 21), 0)
+        frame = cv2.addWeighted(frame, 0.7, shadow, 0.3, 0)
+
+    return frame
+
 # All Domains
 
 GESTURE_RULES = sorted(
@@ -508,6 +540,7 @@ GESTURE_RULES = sorted(
             priority=130,
             color=(180, 100, 255),
             matcher=match_authentic_mutual_love,
+            visual_effect=apply_authentic_love
         ),
         GestureRule(
             name="Idle Death Gamble",
