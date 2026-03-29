@@ -698,10 +698,10 @@ try:
         frame_domain = detect_domain_expansion(detected_hands)
         stable_domain = smooth_domain_prediction(frame_domain, len(detected_hands))
 
-        if stable_domain == "Malevolent Shrine":
-            frame = apply_malevolent_shrine(frame)
-        elif stable_domain == "Unlimited Void":
-            frame = apply_infinite_void(frame)
+        if stable_domain:
+            rule = GESTURE_RULES_BY_NAME[stable_domain]
+            if rule.visual_effect:
+                frame = rule.visual_effect(frame)
 
         if stable_domain:
             cv2.putText(
