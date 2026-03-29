@@ -384,6 +384,7 @@ GESTURE_RULES = sorted(
             priority=120,
             color=(0, 200, 255),
             matcher=match_idle_death_gamble,
+            visual_effect=apply_malevolent_shrine
         ),
         GestureRule(
             name="Malevolent Shrine",
@@ -408,6 +409,7 @@ GESTURE_RULES = sorted(
             priority=90,
             color=(255, 0, 255),
             matcher=match_self_embodiment_of_perfection,
+            visual_effect=apply_self_embodiment
         ),
         GestureRule(
             name="Unlimited Void",
@@ -416,6 +418,7 @@ GESTURE_RULES = sorted(
             priority=80,
             color=(255, 255, 255),
             matcher=match_unlimited_void,
+            visual_effect=apply_infinite_void
         ),
     ],
     key=lambda rule: rule.priority,
