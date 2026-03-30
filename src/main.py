@@ -825,7 +825,7 @@ try:
         if stable_domain:
             cv2.putText(
                 frame,
-                f"Domain Expansion: {stable_domain}",
+                stable_domain,
                 TEXT_POSITION,
                 FONT,
                 1,
