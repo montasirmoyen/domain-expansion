@@ -572,6 +572,46 @@ def apply_idle_death_gamble(frame):
 
     return frame
 
+# Yuji
+
+YUJI_PHASE = 0
+SHOCKWAVE_RAD = 0
+MOTION_BUFFER = deque(maxlen=2) # For speed/blur effect
+
+def apply_yuji_domain(frame):
+    global YUJI_PHASE, SHOCKWAVE_RAD
+    h, w = frame.shape[:2]
+    YUJI_PHASE += 0.1
+    
+    # heartbeat
+    pulse = 1.0 + 0.05 * np.sin(YUJI_PHASE * 4)
+    M_pulse = cv2.getRotationMatrix2D((w//2, h//2), 0, pulse)
+    frame = cv2.warpAffine(frame, M_pulse, (w, h))
+
+    # tint
+    green_tint = np.zeros_like(frame)
+    green_tint[:] = (0, 255, 0)
+    frame = cv2.addWeighted(frame, 0.9, green_tint, 0.1 * abs(np.sin(YUJI_PHASE * 4)), 0)
+
+    # motion blur
+    if len(MOTION_BUFFER) > 0:
+        frame = cv2.addWeighted(frame, 0.7, MOTION_BUFFER[-1], 0.3, 0)
+    MOTION_BUFFER.append(frame.copy())
+
+    SHOCKWAVE_RAD = (SHOCKWAVE_RAD + 20) % (max(h, w))
+    thickness = int(10 * (1 - SHOCKWAVE_RAD / max(h, w))) + 1
+    cv2.circle(frame, (w//2, h//2), SHOCKWAVE_RAD, (100, 255, 100), thickness)
+
+    if random.random() > 0.7:
+        for _ in range(5):
+            angle = random.uniform(0, 2 * math.pi)
+            length = random.randint(100, 300)
+            x2 = int(w//2 + length * math.cos(angle))
+            y2 = int(h//2 + length * math.sin(angle))
+            cv2.line(frame, (w//2, h//2), (x2, y2), (255, 255, 255), 1)
+
+    return frame
+
 # All Domains
 
 GESTURE_RULES = sorted(
@@ -610,6 +650,7 @@ GESTURE_RULES = sorted(
             priority=100,
             color=(0, 255, 0),
             matcher=match_yuji_itadori,
+            visual_effect=apply_yuji_domain
         ),
         GestureRule(
             name="Self-Embodiment of Perfection",
