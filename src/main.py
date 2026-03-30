@@ -529,6 +529,89 @@ def apply_authentic_love(frame):
 
     return frame
 
+# Hakari
+
+HAKARI_PHASE = 0
+SLOT_NUMBERS = [str(random.randint(0, 9)) for _ in range(3)]
+CONFETTI = []
+
+def init_hakari_vfx(w, h):
+    global CONFETTI
+    CONFETTI = [[random.randint(0, w), random.randint(0, h), random.uniform(2, 5), random.choice([(0, 255, 255), (0, 215, 255), (255, 255, 255)])] for _ in range(50)]
+
+def apply_idle_death_gamble(frame):
+    global HAKARI_PHASE, SLOT_NUMBERS
+    h, w = frame.shape[:2]
+    HAKARI_PHASE += 1
+    
+    # tint
+    gold_overlay = np.zeros_like(frame)
+    gold_overlay[:] = (0, 215, 255)
+    frame = cv2.addWeighted(frame, 0.8, gold_overlay, 0.2, 0)
+
+    # slot reels
+    if HAKARI_PHASE % 3 == 0:
+        SLOT_NUMBERS = [str(random.randint(0, 9)) for _ in range(3)]
+    
+    reel_text = f"[{SLOT_NUMBERS[0]}] [{SLOT_NUMBERS[1]}] [{SLOT_NUMBERS[2]}]"
+    cv2.putText(frame, reel_text, (w//2 - 100, h - 50), FONT, 1.5, (255, 255, 255), 4)
+
+    # 777
+    prob_text = f"PROBABILITY: {random.randint(70, 99)}.{random.randint(0, 9)}%"
+    if random.random() > 0.1:
+        cv2.putText(frame, prob_text, (50, h - 50), FONT, 0.7, (0, 255, 255), 2)
+    
+    if random.random() > 0.95:
+        cv2.putText(frame, "777 JACKPOT", (w//2 - 150, h//2), FONT, 2, (0, 255, 255), 10)
+
+    # confetti
+    if not CONFETTI: init_hakari_vfx(w, h)
+    for p in CONFETTI:
+        p[1] = (p[1] + p[2]) % h
+        cv2.circle(frame, (int(p[0]), int(p[1])), 3, p[3], -1)
+
+    return frame
+
+# Yuji
+
+YUJI_PHASE = 0
+SHOCKWAVE_RAD = 0
+MOTION_BUFFER = deque(maxlen=2) # For speed/blur effect
+
+def apply_yuji_domain(frame):
+    global YUJI_PHASE, SHOCKWAVE_RAD
+    h, w = frame.shape[:2]
+    YUJI_PHASE += 0.1
+    
+    # heartbeat
+    pulse = 1.0 + 0.05 * np.sin(YUJI_PHASE * 4)
+    M_pulse = cv2.getRotationMatrix2D((w//2, h//2), 0, pulse)
+    frame = cv2.warpAffine(frame, M_pulse, (w, h))
+
+    # tint
+    green_tint = np.zeros_like(frame)
+    green_tint[:] = (0, 255, 0)
+    frame = cv2.addWeighted(frame, 0.9, green_tint, 0.1 * abs(np.sin(YUJI_PHASE * 4)), 0)
+
+    # motion blur
+    if len(MOTION_BUFFER) > 0:
+        frame = cv2.addWeighted(frame, 0.7, MOTION_BUFFER[-1], 0.3, 0)
+    MOTION_BUFFER.append(frame.copy())
+
+    SHOCKWAVE_RAD = (SHOCKWAVE_RAD + 20) % (max(h, w))
+    thickness = int(10 * (1 - SHOCKWAVE_RAD / max(h, w))) + 1
+    cv2.circle(frame, (w//2, h//2), SHOCKWAVE_RAD, (100, 255, 100), thickness)
+
+    if random.random() > 0.7:
+        for _ in range(5):
+            angle = random.uniform(0, 2 * math.pi)
+            length = random.randint(100, 300)
+            x2 = int(w//2 + length * math.cos(angle))
+            y2 = int(h//2 + length * math.sin(angle))
+            cv2.line(frame, (w//2, h//2), (x2, y2), (255, 255, 255), 1)
+
+    return frame
+
 # All Domains
 
 GESTURE_RULES = sorted(
@@ -549,7 +632,7 @@ GESTURE_RULES = sorted(
             priority=120,
             color=(0, 200, 255),
             matcher=match_idle_death_gamble,
-            visual_effect=apply_malevolent_shrine
+            visual_effect=apply_idle_death_gamble
         ),
         GestureRule(
             name="Malevolent Shrine",
@@ -558,6 +641,7 @@ GESTURE_RULES = sorted(
             priority=110,
             color=(0, 0, 255),
             matcher=match_malevolent_shrine,
+            visual_effect=apply_malevolent_shrine
         ),
         GestureRule(
             name="Yuji Itadori",
@@ -566,6 +650,7 @@ GESTURE_RULES = sorted(
             priority=100,
             color=(0, 255, 0),
             matcher=match_yuji_itadori,
+            visual_effect=apply_yuji_domain
         ),
         GestureRule(
             name="Self-Embodiment of Perfection",
@@ -740,7 +825,7 @@ try:
         if stable_domain:
             cv2.putText(
                 frame,
-                f"Domain Expansion: {stable_domain}",
+                stable_domain,
                 TEXT_POSITION,
                 FONT,
                 1,
