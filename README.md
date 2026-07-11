@@ -27,13 +27,36 @@ A "Domain Expansion" (領域展開, りょういきてんかい, Ryōiki Tenkai)
 
 # Usage
 
-```
+This repository contains two implementations of the project:
+
+- **Python version (`python-proj/`)** - the original OpenCV and MediaPipe desktop application.
+- **Web version (`dex-client/`)** — a browser-based React, MediaPipe, and Three.js experience with webcam gesture detection and interactive Domain Expansion visualizations.
+
+### Python Version
+
+```bash
 git clone https://github.com/montasirmoyen/domain-expansion
 cd domain-expansion
 
 pip install -r requirements.txt
 
 python3 src/main.py
+````
+
+Pressing **Q** on your keyboard closes the program.
+
+### Web Version
+
+Make sure [Node.js](https://nodejs.org/) and npm are installed, then run:
+
+```bash
+cd dex-client
+npm i
+npm run dev
 ```
 
-Pressing "Q" on your keyboard closes the program.
+Open the local URL printed by Vite (usually `http://localhost:5173`) and allow camera access when prompted. Webcam processing happens locally in the browser.
+
+## Model Attribution
+
+[Malevolent Shrine – Jujutsu Kaisen](https://sketchfab.com/3d-models/malevolent-shrine-jujutsu-kaisen-b0e9e4a8682c43acaf9051c507c2b13b) by [TSK_VITANK](https://sketchfab.com/TSK_VITANK) is licensed under [Creative Commons Attribution-NonCommercial 4.0](https://creativecommons.org/licenses/by-nc/4.0/). This model may not be used commercially.
