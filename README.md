@@ -3,8 +3,6 @@
 > [!NOTE]  
 > This project may contain minor spoilers to the Jujutsu Kaisen series 😅
 
-![Domain Expansion demonstration](/public/rs-de.gif)
-
 This program uses a webcam to detect specific hand gestures and identifies which Domain Expansion hand sign they correspond to. When a gesture is recognized, the program displays the name of the Domain Expansion associated with that hand sign.
 
 Web version: https://domain-expansion-jjk.vercel.app/
@@ -35,6 +33,8 @@ This repository contains two implementations of the project:
 
 - **Python version (`python-proj/`)** - the original OpenCV and MediaPipe desktop application.
 - **Web version (`dex-client/`)** — a browser-based React, MediaPipe, and Three.js experience with webcam gesture detection and interactive Domain Expansion visualizations.
+
+![Domain Expansion demonstration](/public/rs-de.gif)
 
 ### Python Version
 
